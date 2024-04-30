@@ -1,0 +1,5 @@
+/.secrets
+/in_meta_not_s3.csv
+/in_s3_not_meta.csv
+/metadata_filenames.csv
+/s3_filenames.csv
