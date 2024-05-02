@@ -25,7 +25,7 @@ db_password = 'ycx$qWs@nVP4T$f4'
 #Get bucket and filename from event
 # S3 bucket and CSV file details
 bucket_name = 'livevoxscreenrecordings'
-key = '2024/04/27/20240427.csv'
+key = '2024/04/24/20240424.csv'
 
 # Initialize S3 client
 s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
