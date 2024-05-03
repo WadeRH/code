@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-#
+
 # import libraries
 
 import logging
@@ -11,6 +11,8 @@ import os
 import sys
 import typing
 import json
+import psycopg2
+import csv
 from botocore.exceptions import ClientError
 from typing import Mapping
 from pathlib import Path
@@ -27,6 +29,14 @@ tmpdir_path = "/home/callproc/LVScreenRecordings/tmp"
 bucket = "livevoxscreenrecordings"
 
 entered_filename = input("Please enter the zip file name to process: ")
+error_topic_arn = 'arn:aws:sns:us-west-2:416360478487:Recording_Import_Notifications'
+
+# PostgreSQL database connection details
+db_host = 'callrecordinginfo.cx8wkeu24exk.us-west-2.rds.amazonaws.com'
+db_port = '5432'
+db_name = 'callrecordinginfo'
+db_user = 'call_recordings_user'
+db_password = 'ycx$qWs@nVP4T$f4'
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -308,6 +318,8 @@ def upload_call_recordings():
     day = tmp_files[0][6:8]
     search_limit = tmp_files[0][0:8]
     s3path = year + "/" + month + "/" + day + "/"
+    global csv_key 
+    csv_key = s3path + year + month + day + ".csv"
 
     # Check if files exist in tempdir
     is_empty = not any(Path(tmpdir_path).iterdir())
@@ -406,7 +418,7 @@ def upload_call_recordings():
             logger.exception(f"An error occurred: {e}", exc_info=True)
     else:
         # Build functions to identify missing files in S3 and reupload
-        print("nothing")
+        send_sns_notification(error_topic_arn, "ERROR: Mismatch between files uploaded to S3 and in local drive!")
 
 
 def folder_exists(bucket: str, path: str) -> bool:
@@ -538,6 +550,67 @@ def cleanup(directory, tmpdirectory):
         print(f"An error occurred: {e}")
         logger.exception(f"An error occurred: {e}", exc_info=True)
 
+def csv_to_postgres():
+    s3_client = boto3.client("s3")
+    
+    # Initialize PostgreSQL connection
+    conn = psycopg2.connect(
+        host=db_host,
+        port=db_port,
+        database=db_name,
+        user=db_user,
+        password=db_password
+    )
+    cursor = conn.cursor()
+
+    try:
+        # Download CSV file from S3
+        logger.info("Getting CSV file from S3 bucket")
+        s3_object = s3_client.get_object(Bucket=bucket, Key=csv_key)
+        csv_data = s3_object['Body'].read().decode('utf-8').splitlines()
+
+        # Parse CSV data and insert into PostgreSQL table
+        logger.info("Reading CSV file")
+        csv_reader = csv.reader(csv_data)
+        next(csv_reader)  # Skip header row if present
+        logger.info("Starting data insertion to database")
+        for row in csv_reader:
+            # Assuming your table schema matches the CSV file columns
+            cursor.execute("INSERT INTO livevox_metadata (recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10]))
+        
+        # Commit the transaction
+        logger.info("Commiting data to database")
+        conn.commit()
+        logger.info("Data imported successfully!")
+
+    except Exception as e:
+        print(f"Error: {e}")
+        send_sns_notification(error_topic_arn, "ERROR: LiveVox call recording metadata import failed!")
+        conn.rollback()
+
+    finally:
+        # Close PostgreSQL connection
+        cursor.close()
+        conn.close()
+
+def send_sns_notification(topic_arn, message):
+    json_file_path = r".secrets/amazon.json"
+
+    with open(json_file_path, "r") as f:
+        aws_creds = json.load(f)
+
+    aws_access_key_id = aws_creds["aws_access_key_id"]
+    aws_secret_access_key = aws_creds["aws_secret_access_key"]
+    aws_region = 'us-west-2'
+    
+    sns_client = boto3.client('sns', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=aws_region)
+    response = sns_client.publish(
+        TopicArn=topic_arn,
+        Message=message
+    )
+    
+    print("MessageId of the published message:", response['MessageId'])
+    logger.info("MessageId of the published message:", response['MessageId'])
 
 def main():
 
@@ -551,8 +624,9 @@ def main():
 
     # UPLOAD CALL RECORDINGS
     upload_call_recordings()
-
-    print("what")
+    
+    # IMPORT CSV TO POSTGRES
+    csv_to_postgres()
 
     sys.exit(0)
 

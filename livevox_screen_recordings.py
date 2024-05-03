@@ -28,6 +28,8 @@ filepath = "/home/callproc/LVScreenRecordings/"
 tmpdir_path = "/home/callproc/LVScreenRecordings/tmp"
 bucket = "livevoxcallrecordings"
 
+error_topic_arn = 'arn:aws:sns:us-west-2:416360478487:Recording_Import_Notifications'
+
 # PostgreSQL database connection details
 db_host = 'callrecordinginfo.cx8wkeu24exk.us-west-2.rds.amazonaws.com'
 db_port = '5432'
@@ -416,7 +418,7 @@ def upload_call_recordings():
             logger.exception(f"An error occurred: {e}", exc_info=True)
     else:
         # Build functions to identify missing files in S3 and reupload
-        print("nothing")
+        send_sns_notification(error_topic_arn, "ERROR: Mismatch between files uploaded to S3 and in local drive!")
 
 
 def folder_exists(bucket: str, path: str) -> bool:
@@ -547,7 +549,7 @@ def cleanup(directory, tmpdirectory):
     except Exception as e:
         print(f"An error occurred: {e}")
         logger.exception(f"An error occurred: {e}", exc_info=True)
-        
+
 def csv_to_postgres():
     s3_client = boto3.client("s3")
     
@@ -583,6 +585,7 @@ def csv_to_postgres():
 
     except Exception as e:
         print(f"Error: {e}")
+        send_sns_notification(error_topic_arn, "ERROR: LiveVox call recording metadata import failed!")
         conn.rollback()
 
     finally:
@@ -590,11 +593,29 @@ def csv_to_postgres():
         cursor.close()
         conn.close()
 
+def send_sns_notification(topic_arn, message):
+    json_file_path = r".secrets/amazon.json"
+
+    with open(json_file_path, "r") as f:
+        aws_creds = json.load(f)
+
+    aws_access_key_id = aws_creds["aws_access_key_id"]
+    aws_secret_access_key = aws_creds["aws_secret_access_key"]
+    aws_region = 'us-west-2'
+    
+    sns_client = boto3.client('sns', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=aws_region)
+    response = sns_client.publish(
+        TopicArn=topic_arn,
+        Message=message
+    )
+    
+    print("MessageId of the published message:", response['MessageId'])
+    logger.info("MessageId of the published message:", response['MessageId'])
 
 def main():
 
     setup_logging()
-    # 
+
     # DOWNLOAD CALL RECORDINGS
     get_call_recordings()
 
