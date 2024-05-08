@@ -24,8 +24,19 @@ from zipfile import ZipFile
 from logging.handlers import TimedRotatingFileHandler
 
 
+# AWS credentials and region
+json_file_path = r".secrets/amazon.json"
+
+with open(json_file_path, "r") as f:
+    aws_creds = json.load(f)
+
+aws_access_key_id = aws_creds["aws_access_key_id"]
+aws_secret_access_key = aws_creds["aws_secret_access_key"]
+aws_region = 'us-west-2'
+
 filepath = "/home/callproc/LVCallRecordings/"
 tmpdir_path = "/home/callproc/LVCallRecordings/tmp"
+log_filepath = "/home/callproc/logs/"
 bucket = "livevoxcallrecordings"
 
 error_topic_arn = 'arn:aws:sns:us-west-2:416360478487:Recording_Import_Notifications'
@@ -618,6 +629,20 @@ def send_sns_notification(topic_arn, message):
     
     print("MessageId of the published message:", response['MessageId'])
     logger.info("MessageId of the published message:", response['MessageId'])
+    
+def yesterdays_log_to_S3():
+    yesterday = datetime.now() - timedelta(1)
+    filedate = datetime.strftime(yesterday, "%Y%m%d")
+    filename = "LV_CR.log." + filedate[0:4] + "-" + filedate[4:6] + "-" + filedate[6:8]
+    
+    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=aws_region)
+
+    try:
+        s3_filename = "logs/" + filename
+        s3.upload_file(filepath + filename, bucket, s3_filename)
+        logger.info(f"{filename} log file uploaded successfully.")
+    except Exception as e:
+        logger.exception(f"Error uploading {filename}: {e}", exc_info=True)
 
 def main():
 
@@ -634,6 +659,9 @@ def main():
     
     # IMPORT CSV TO POSTGRES
     csv_to_postgres()
+    
+    # UPLOAD YESTERDAYS LOG FILE
+    yesterdays_log_to_S3()
 
     sys.exit(0)
 
