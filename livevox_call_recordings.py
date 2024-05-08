@@ -377,12 +377,14 @@ def upload_call_recordings():
     differences_in_s3, differences_in_local = find_differences(s3_files, local_files)
 
     print("Differences in s3 files compared to local: ")
-    logger.info("Differences in s3 files compared to local:")
+    logger.info("Differences in s3 files compared to local:" + str(len(differences_in_s3)))
     print(len(differences_in_s3))
+    logger.info(differences_in_s3)
     logger.info(len(differences_in_s3))
 
-    print("Differences in local files compared to s3: ")
+    print("Differences in local files compared to s3: " + str(len(differences_in_local)))
     print(len(differences_in_local))
+    logger.info(differences_in_local)
     logger.info("Differences in local files compared to s3: ")
     logger.info(len(differences_in_local))
 
