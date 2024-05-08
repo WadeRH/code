@@ -421,7 +421,14 @@ def upload_call_recordings():
     else:
         # Build functions to identify missing files in S3 and reupload
         send_sns_notification(error_topic_arn, "ERROR: Mismatch between files uploaded to S3 and in local drive!")
-
+        
+        logger.info("Differences in S3 compared to local: ")
+        for item in differences_in_s3:
+            logger.info(item)
+            
+        logger.info("Differences in local compared to S3 : ")
+        for item in differences_in_local:
+            logger.info(item)
 
 def folder_exists(bucket: str, path: str) -> bool:
     """
