@@ -639,7 +639,7 @@ def yesterdays_log_to_S3():
 
     try:
         s3_filename = "logs/" + filename
-        s3.upload_file(filepath + filename, bucket, s3_filename)
+        s3.upload_file('/home/callproc/logs/' + filename, bucket, s3_filename)
         logger.info(f"{filename} log file uploaded successfully.")
     except Exception as e:
         logger.exception(f"Error uploading {filename}: {e}", exc_info=True)
