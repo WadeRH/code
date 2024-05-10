@@ -659,7 +659,7 @@ def main():
     
     # IMPORT CSV TO POSTGRES
     csv_to_postgres()
-    
+
     # UPLOAD YESTERDAYS LOG FILE
     yesterdays_log_to_S3()
 

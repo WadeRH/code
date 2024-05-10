@@ -24,8 +24,19 @@ from zipfile import ZipFile
 from logging.handlers import TimedRotatingFileHandler
 
 
+# AWS credentials and region
+json_file_path = r".secrets/amazon.json"
+
+with open(json_file_path, "r") as f:
+    aws_creds = json.load(f)
+
+aws_access_key_id = aws_creds["aws_access_key_id"]
+aws_secret_access_key = aws_creds["aws_secret_access_key"]
+aws_region = 'us-west-2'
+
 filepath = "/home/callproc/LVScreenRecordings/"
 tmpdir_path = "/home/callproc/LVScreenRecordings/tmp"
+log_filepath = "/home/callproc/logs/"
 bucket = "livevoxcallrecordings"
 
 error_topic_arn = 'arn:aws:sns:us-west-2:416360478487:Recording_Import_Notifications'
@@ -377,11 +388,11 @@ def upload_call_recordings():
     differences_in_s3, differences_in_local = find_differences(s3_files, local_files)
 
     print("Differences in s3 files compared to local: ")
-    logger.info("Differences in s3 files compared to local:")
+    logger.info("Differences in s3 files compared to local:" + str(len(differences_in_s3)))
     print(len(differences_in_s3))
     logger.info(len(differences_in_s3))
 
-    print("Differences in local files compared to s3: ")
+    print("Differences in local files compared to s3: " + str(len(differences_in_local)))
     print(len(differences_in_local))
     logger.info("Differences in local files compared to s3: ")
     logger.info(len(differences_in_local))
@@ -419,7 +430,14 @@ def upload_call_recordings():
     else:
         # Build functions to identify missing files in S3 and reupload
         send_sns_notification(error_topic_arn, "ERROR: Mismatch between files uploaded to S3 and in local drive!")
-
+        
+        logger.info("Differences in S3 compared to local: ")
+        for item in differences_in_s3:
+            logger.info(item)
+            
+        logger.info("Differences in local compared to S3 : ")
+        for item in differences_in_local:
+            logger.info(item)
 
 def folder_exists(bucket: str, path: str) -> bool:
     """
@@ -611,6 +629,20 @@ def send_sns_notification(topic_arn, message):
     
     print("MessageId of the published message:", response['MessageId'])
     logger.info("MessageId of the published message:", response['MessageId'])
+    
+def yesterdays_log_to_S3():
+    yesterday = datetime.now() - timedelta(1)
+    filedate = datetime.strftime(yesterday, "%Y%m%d")
+    filename = "LV_ScreenRec.log." + filedate[0:4] + "-" + filedate[4:6] + "-" + filedate[6:8]
+    
+    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=aws_region)
+
+    try:
+        s3_filename = "logs/" + filename
+        s3.upload_file('/home/callproc/logs/' + filename, bucket, s3_filename)
+        logger.info(f"{filename} log file uploaded successfully.")
+    except Exception as e:
+        logger.exception(f"Error uploading {filename}: {e}", exc_info=True)
 
 def main():
 
@@ -627,6 +659,9 @@ def main():
     
     # IMPORT CSV TO POSTGRES
     csv_to_postgres()
+
+    # UPLOAD YESTERDAYS LOG FILE
+    yesterdays_log_to_S3()
 
     sys.exit(0)
 
