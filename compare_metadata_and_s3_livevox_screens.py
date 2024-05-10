@@ -39,15 +39,14 @@ def get_s3_filenames(bucket_name, prefix=''):
                 key = obj['Key']
                 if key.endswith(('.mp4', '.wav', '.mp3', '.webm')):  # Only include items ending with these file types
                     trimmed = key[11:]
-                    trimmed1 = trimmed[:-5]
-                    s3_filenames.append(trimmed1)
+                    s3_filenames.append(trimmed)
                     # print(trimmed1)
 
     s3_total = len(s3_filenames)
     
     print("Number of s3 files" + str(s3_total))
     
-    with open("s3_filenames.csv", 'w', newline= '') as output:
+    with open("s3_screen_filenames.csv", 'w', newline= '') as output:
         wr = csv.writer(output, dialect='excel')
         for element in s3_filenames:
             wr.writerow([element])
@@ -66,7 +65,7 @@ def get_database_filenames():
         cursor.execute("SELECT recording_filename FROM livevox_screen_metadata")
         rows = cursor.fetchall()
 
-        database_filenames = [row[0][:-4] for row in rows]
+        database_filenames = [row[0] for row in rows]
         
         database_total = len(database_filenames)
         
