@@ -595,7 +595,7 @@ def csv_to_postgres():
         logger.info("Starting data insertion to database")
         for row in csv_reader:
             # Assuming your table schema matches the CSV file columns
-            cursor.execute("INSERT INTO livevox_metadata (recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10]))
+            cursor.execute("INSERT INTO livevox_screen_metadata (recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10]))
         
         # Commit the transaction
         logger.info("Commiting data to database")
@@ -604,7 +604,7 @@ def csv_to_postgres():
 
     except Exception as e:
         print(f"Error: {e}")
-        send_sns_notification(error_topic_arn, "ERROR: LiveVox call recording metadata import failed!")
+        send_sns_notification(error_topic_arn, "ERROR: LiveVox screen recording metadata import failed!")
         conn.rollback()
 
     finally:
