@@ -5,7 +5,7 @@ import csv
 import json
 
 # AWS credentials and region
-json_file_path = r".secrets/amazon.json"
+json_file_path = r"/home/callproc/code/.secrets/amazon.json"
 
 with open(json_file_path, "r") as f:
     aws_creds = json.load(f)
@@ -40,7 +40,8 @@ def get_s3_filenames(bucket_name, prefix=''):
                 if key.endswith(('.mp4', '.wav', '.mp3', '.webm')):  # Only include items ending with these file types
                     trimmed = key[11:]
                     trimmed1 = trimmed[:-5]
-                    s3_filenames.append(trimmed1)
+                    s3_filenames.append(trimmed)
+                    # s3_filenames.append(trimmed1)   ##### USE WHEN FILE EXTENSIONS DO NOT MATCH
                     # print(trimmed1)
 
     s3_total = len(s3_filenames)
@@ -66,7 +67,8 @@ def get_database_filenames():
         cursor.execute("SELECT recording_filename FROM livevox_screen_metadata")
         rows = cursor.fetchall()
 
-        database_filenames = [row[0][:-4] for row in rows]
+        database_filenames = [row[0] for row in rows]
+        # database_filenames = [row[0][:-4] for row in rows]  #### USE WHEN FILE EXTENSIONS DO NOT MATCH
         
         database_total = len(database_filenames)
         
