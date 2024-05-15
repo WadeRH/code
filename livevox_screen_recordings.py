@@ -25,7 +25,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 
 # AWS credentials and region
-json_file_path = r".secrets/amazon.json"
+json_file_path = r"/home/callproc/code/.secrets/amazon.json"
 
 with open(json_file_path, "r") as f:
     aws_creds = json.load(f)
@@ -37,7 +37,7 @@ aws_region = 'us-west-2'
 filepath = "/home/callproc/LVScreenRecordings/"
 tmpdir_path = "/home/callproc/LVScreenRecordings/tmp"
 log_filepath = "/home/callproc/logs/"
-bucket = "livevoxcallrecordings"
+bucket = "livevoxscreenrecordings"
 
 error_topic_arn = 'arn:aws:sns:us-west-2:416360478487:Recording_Import_Notifications'
 
@@ -603,7 +603,7 @@ def csv_to_postgres():
 
     except Exception as e:
         print(f"Error: {e}")
-        send_sns_notification(error_topic_arn, "ERROR: LiveVox call recording metadata import failed!")
+        send_sns_notification(error_topic_arn, "ERROR: LiveVox screen recording metadata import failed!")
         conn.rollback()
 
     finally:
@@ -629,7 +629,7 @@ def send_sns_notification(topic_arn, message):
     
     print("MessageId of the published message:", response['MessageId'])
     logger.info("MessageId of the published message:", response['MessageId'])
-    
+
 def yesterdays_log_to_S3():
     yesterday = datetime.now() - timedelta(1)
     filedate = datetime.strftime(yesterday, "%Y%m%d")

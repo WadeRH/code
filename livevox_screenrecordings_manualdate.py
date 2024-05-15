@@ -25,7 +25,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 
 # AWS credentials and region
-json_file_path = r".secrets/amazon.json"
+json_file_path = r"/home/callproc/code/.secrets/amazon.json"
 
 with open(json_file_path, "r") as f:
     aws_creds = json.load(f)
