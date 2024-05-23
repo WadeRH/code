@@ -633,16 +633,16 @@ def send_sns_notification(topic_arn, message):
 def yesterdays_log_to_S3():
     yesterday = datetime.now() - timedelta(1)
     filedate = datetime.strftime(yesterday, "%Y%m%d")
-    filename = "LV_ScreenRec.log." + filedate[0:4] + "-" + filedate[4:6] + "-" + filedate[6:8]
+    log_filename = "LV_ScreenRec.log." + filedate[0:4] + "-" + filedate[4:6] + "-" + filedate[6:8]
     
     s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=aws_region)
 
     try:
-        s3_filename = "logs/" + filename
-        s3.upload_file('/home/callproc/logs/' + filename, bucket, s3_filename)
-        logger.info(f"{filename} log file uploaded successfully.")
+        s3_filename = "logs/" + log_filename
+        s3.upload_file('/home/callproc/logs/' + log_filename, bucket, s3_filename)
+        logger.info(f"{log_filename} log file uploaded successfully.")
     except Exception as e:
-        logger.exception(f"Error uploading {filename}: {e}", exc_info=True)
+        logger.exception(f"Error uploading {log_filename}: {e}", exc_info=True)
 
 def main():
 
