@@ -272,7 +272,11 @@ def download_file(
     :param local_path: local file path
     :param callback: optional data callback
     """
-    remote_file_size = sftp_client.stat(remote_path).st_size
+    try:
+        remote_file_size = sftp_client.stat(remote_path).st_size
+    except:
+        logging.error(f"The file '{remote_path}' is not available for download.")
+        sys.exit(f"Error: The file '{remote_path}' is not available for download.")
 
     logger.info("Starting file download")
 
