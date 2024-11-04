@@ -14,11 +14,11 @@ import json
 
 
 # PostgreSQL database connection details
-db_host = 'callrecordinginfo.cx8wkeu24exk.us-west-2.rds.amazonaws.com'
-db_port = '5432'
-db_name = 'callrecordinginfo'
-db_user = 'call_recordings_user'
-db_password = 'ycx$qWs@nVP4T$f4'
+db_host = "callrecordinginfo.cx8wkeu24exk.us-west-2.rds.amazonaws.com"
+db_port = "5432"
+db_name = "callrecordinginfo"
+db_user = "call_recordings_user"
+db_password = "ycx$qWs@nVP4T$f4"
 
 # AWS connection details
 json_file_path = r".secrets/amazon.json"
@@ -28,15 +28,15 @@ with open(json_file_path, "r") as f:
 
 aws_access_key_id = aws_creds["aws_access_key_id"]
 aws_secret_access_key = aws_creds["aws_secret_access_key"]
-region_name = 'us-west-2'
+region_name = "us-west-2"
 
-tmpdir_path = '/home/callproc/pre210_callrecs'
+tmpdir_path = "/home/callproc/pre210_callrecs"
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
 fh = logging.handlers.RotatingFileHandler(
-    "/home/callproc/logs/LV_pre210.log", backupCount=14   
+    "/home/callproc/logs/LV_pre210.log", backupCount=14
 )
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
@@ -54,6 +54,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s]: %(message)s"
 )
 
+
 def setup_logging(
     default_path="logging.json", default_level=logging.INFO, env_key="LOG_CFG"
 ):
@@ -69,40 +70,49 @@ def setup_logging(
     else:
         logging.basicConfig(level=default_level)
 
+
 def get_call_recordings(start, end):
     ### Get session token for future API calls
 
     session_token_endpoint = "https://api.na6.livevox.com/session/login"
-    session_token_headers = {"LV-Access": "eefe858c-430c-4788-b5a2-7d33bb0ec611", "Content-Type": "application/json"}
+    session_token_headers = {
+        "LV-Access": "eefe858c-430c-4788-b5a2-7d33bb0ec611",
+        "Content-Type": "application/json",
+    }
     session_token_data = {
         "clientName": "LV_NA6_0043",
         "userName": "APIUSER",
         "password": "iLending092023!",
-        "agent": "false"
+        "agent": "false",
     }
 
-    response = requests.post(session_token_endpoint, headers=session_token_headers, json=session_token_data).json()
+    response = requests.post(
+        session_token_endpoint, headers=session_token_headers, json=session_token_data
+    ).json()
 
-    session_token = response.get('sessionId')
+    session_token = response.get("sessionId")
 
     ### Get call recording list from API
 
-    call_recording_endpoint = "https://api.na6.livevox.com/reporting/standard/callRecording"
+    call_recording_endpoint = (
+        "https://api.na6.livevox.com/reporting/standard/callRecording"
+    )
     call_recording_headers = {"LV-Session": session_token}
     call_recording_data = {
-        "startDate": start,  #1712448000000
-        "endDate": end,  #1712534400000
+        "startDate": start,  # 1712448000000
+        "endDate": end,  # 1712534400000
         "sortBy": "CALL_START_TIME",
-        "filter": {
-            "service" : [
-                {"id": "3179521"}
-            ]
-        }
+        # "filter": {"callCenter": [{"id": 3063064}]},
+        "filter": {"service": [{"id": "3179521"}]},
     }
 
-    call_recording_report_response = requests.post(call_recording_endpoint, headers=call_recording_headers, json=call_recording_data).json()
+    call_recording_report_response = requests.post(
+        call_recording_endpoint,
+        headers=call_recording_headers,
+        json=call_recording_data,
+    ).json()
 
-    call_recording_report = call_recording_report_response.get('callRecording')
+    call_recording_report = call_recording_report_response.get("callRecording")
 
     ######### BETWEEN THESE TWO MAKERS CAN PROBABLY BE DELETED
     # Iterate through list of dictionaries writing needed values to a CSV file
@@ -112,14 +122,11 @@ def get_call_recordings(start, end):
 
     # csv_file_name = 'LV_calls_' + datestring + ".csv"
     ######### BETWEEN THESE TWO MAKERS CAN PROBABLY BE DELETED
-    
-    
-    
+
     # fieldnames = ['account', 'transferConnect', 'phone', 'session', call_result, 'termCode', 'campaign', 'serviceId', 'agent', 'transferDuration']
 
     # NOTE: Postgres columns = recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs
     # Mapping to sublist             13                  00              06          03          05             NULL       10                09              11        04          08
-
 
     value_list_from_call_recording_report = []
 
@@ -129,44 +136,79 @@ def get_call_recordings(start, end):
         values = list(dictionary.values())
         value_list_from_call_recording_report.append(values)
 
-
     for sublist in value_list_from_call_recording_report:
+
+        # SUBLIST ORDER
+        # 0 - Service Name
+        # 1 - Phone
+        # 2 - Session
+        # 3 - Start time
+        # 4 - End time
+        # 5 - Duration (sec)
+        # 6 - Call result
+        # 7 - Service Number
+        # 8 - Call Center Number
+        # 9 - Recording file ID
+
         recordingID = sublist[13]
-        
-        calldate = datetime.datetime.fromtimestamp(int(sublist[6][:10]))
+
+        calldate = datetime.datetime.fromtimestamp(int(sublist[3][:10]))
         calldate_str = calldate.strftime("%Y%m%d%H%M%S")
-        
-        recording_filename = calldate_str + '_' + sublist[0] + '_' + sublist[3] + '.mp3'
-        
-        
-        call_recording_dl_endpoint = 'https://api.na6.livevox.com/compliance/recording/' + recordingID + '?='
-        
-        call_recording_binary = requests.get(call_recording_dl_endpoint, headers=call_recording_headers)
-        
-        call_recording_filename = Path("/home/callproc/pre210_callrecs/" + recording_filename)
-        
+
+        recording_filename = (
+            calldate_str + "_" + sublist[0] + "_" + sublist[3] + ".mp3"
+        )  ### NEEDS FIXING sublist[0] needs to be accountnumber
+
+        call_recording_dl_endpoint = (
+            "https://api.na6.livevox.com/compliance/recording/" + recordingID + "?="
+        )
+
+        call_recording_binary = requests.get(
+            call_recording_dl_endpoint, headers=call_recording_headers
+        )
+
+        call_recording_filename = Path(
+            "/home/callproc/pre210_callrecs/" + recording_filename
+        )
+
         call_recording_filename.write_bytes(call_recording_binary.content)
-        
+
         sublist[13] = recording_filename
-        
+
         ## Write fields to new list of lists for import into Postgres
-        
-        starttime = datetime.datetime.fromtimestamp(int(sublist[6][:10]))  #### NEED TO FIGURE OUT HOW TO GET THE TIME STAMP CORRECT FOR TIMEZONE
+
+        starttime = datetime.datetime.fromtimestamp(
+            int(sublist[6][:10])
+        )  #### NEED TO FIGURE OUT HOW TO GET THE TIME STAMP CORRECT FOR TIMEZONE
         starttime_str = starttime.strftime("%Y%m%d%H%M%S")
-        
-                
-        temp_list = [sublist[13], sublist[0], starttime_str, sublist[3], sublist[5].replace("@", "_"), 'NA', sublist[10], sublist[9], sublist[11], sublist[4], sublist[8]]
-        
+
+        temp_list = [
+            sublist[13],
+            sublist[0],
+            starttime_str,
+            sublist[3],
+            sublist[5].replace("@", "_"),
+            "NA",
+            sublist[10],
+            sublist[9],
+            sublist[11],
+            sublist[4],
+            sublist[8],
+        ]
+
         list_for_postgres.append(temp_list)
-        
-    return(list_for_postgres)
+
+    return list_for_postgres
+
 
 def write_metadata_to_database(list_for_postgres):
     ### Create connection to database, create SQL statement, parse through list of metadata and queue to SQL, commit, and close
 
     # test_sublist = [['20240406060051_2222316_4098880506.mp3', '2222316', '20240406060051', '4098880506', 'U57E71T6611558F_10.125.17.149', 'NA', 'AGENT - Customer Hung Up', 'Main_Dialer_Campaign', 3179521, 'RGREBE', 17], ['20240406060137_2222315_5808535301.mp3', '2222315', '20240406060137', '5808535301', 'U57F77T661155BE_10.125.25.83', 'NA', 'AGENT - Left Message Machine', 'Main_Dialer_Campaign', 3179521, 'ASTAVROPOULOS', 1], ['20240406060157_2222313_2103460654.mp3', '2222313', '20240406060157', '2103460654', 'U58170T661155D2_10.125.17.149', 'NA', 'AGENT - CUST 8', 'Main_Dialer_Campaign', 3179521, 'RGREBE', 20], ['20240406060208_2222238_9547436546.mp3', '2222238', '20240406060208', '9547436546', 'U58225T661155DD_10.125.17.149', 'NA', 'AGENT - Left Message Machine', 'Main_Dialer_Campaign', 3179521, 'ASTAVROPOULOS', 23]]
 
-    conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_password, host=db_host, port=db_port)
+    conn = psycopg2.connect(
+        dbname=db_name, user=db_user, password=db_password, host=db_host, port=db_port
+    )
     cur = conn.cursor()
 
     sql = "INSERT INTO livevox_test (recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
@@ -174,17 +216,18 @@ def write_metadata_to_database(list_for_postgres):
     try:
         for sublist in list_for_postgres:
             cur.execute(sql, sublist)
-            
+
         conn.commit()
-            
+
     except Exception as e:
         print(f"Error: {e}")
         conn.rollback()
-        
+
     finally:
         # Close PostgreSQL connection
         cur.close()
         conn.close()
+
 
 def upload_call_recordings():
     """\
@@ -212,15 +255,17 @@ def upload_call_recordings():
         logger.info("Files found to process")
 
     # Connect to AWS and create an S3 resource
-    
-    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region_name)
 
-    bucket="livevoxpre210test"
-    
-    s3 = boto3.resource(
-        service_name="s3",
-        region_name="us-west-2"
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        region_name=region_name,
     )
+
+    bucket = "livevoxpre210test"
+
+    s3 = boto3.resource(service_name="s3", region_name="us-west-2")
 
     if folder_exists(bucket, s3path):
         print("Folder exists")
@@ -302,19 +347,18 @@ def upload_call_recordings():
         # Build functions to identify missing files in S3 and reupload
         print("nothing")
 
+
 def folder_exists(bucket: str, path: str) -> bool:
     # Check to see if YYYY/MM/DD diretory exists within S3 bucket
     # based on first 6 characters of filename
-    
-    s3 = boto3.resource(
-        service_name="s3",
-        region_name="us-west-2"
-    )
-    
+
+    s3 = boto3.resource(service_name="s3", region_name="us-west-2")
+
     s3 = boto3.client("s3")
     path = path.rstrip("/")
     resp = s3.list_objects(Bucket=bucket, Prefix=path, Delimiter="/", MaxKeys=1)
     return "CommonPrefixes" in resp
+
 
 def upload_files(bucket: str, path: str) -> bool:
     """
@@ -331,6 +375,7 @@ def upload_files(bucket: str, path: str) -> bool:
             logger.info(f"{file_name} uploaded successfully.")
         except Exception as e:
             logger.exception(f"Error uploading {file_name}: {e}", exc_info=True)
+
 
 def list_files_in_bucket(bucket_name, filter, prefix=""):
     """
@@ -357,6 +402,7 @@ def list_files_in_bucket(bucket_name, filter, prefix=""):
 
     return s3_files
 
+
 def read_files_in_local_folder(folder_path):
     """
     Create a list of all extraced files in the tempdir.
@@ -377,6 +423,7 @@ def read_files_in_local_folder(folder_path):
 
     return local_files
 
+
 def find_differences(list1, list2):
     """
     Find differences between two lists.
@@ -388,6 +435,7 @@ def find_differences(list1, list2):
     in_local_not_in_s3 = set2 - set1
 
     return in_s3_not_in_local, in_local_not_in_s3
+
 
 def cleanup(tmpdirectory):
     """
@@ -411,27 +459,33 @@ def cleanup(tmpdirectory):
         print(f"An error occurred: {e}")
         logger.exception(f"An error occurred: {e}", exc_info=True)
 
+
 def get_date():
-    start_date_uf = input("Please enter the date you want to download recordings for in MMDDYYYY format: ")
-    
+    start_date_uf = input(
+        "Please enter the date you want to download recordings for in MMDDYYYY format: "
+    )
+
     try:
         date = datetime.datetime.strptime(start_date_uf, "%m%d%Y")
-        start_of_day = datetime.datetime(date.year, date.month, date.day, 0, 0, 0)
-        end_of_day = datetime.datetime(date.year, date.month, date.day, 23, 59, 59)
-        
+        start_of_day = datetime.datetime(date.year, date.month, date.day, 2, 0, 0)
+        end_of_day = datetime.datetime(date.year, date.month, date.day + 1, 1, 59, 59)
+
         start_epoch = int(start_of_day.timestamp() * 1000 + 21600000)
+        # start_epoch = int(start_of_day.timestamp() * 1000)
         end_epoch = int(end_of_day.timestamp() * 1000 + 21600000)
-        
+        # end_epoch = int(end_of_day.timestamp() * 1000)
+
         return start_epoch, end_epoch
-    
+
     except ValueError:
         print("Invalid date format. Please enter date in MMDDYYYY format.")
         return None
 
+
 def main():
 
     setup_logging()
-    
+
     # GET DATE FOR DOWNLOADING AND CONVERT TO EPOCH TIME
     start_date, end_date = get_date()
 
@@ -439,10 +493,10 @@ def main():
     list_for_postgres = get_call_recordings(start_date, end_date)
 
     # WRITE METADATA TO POSTGRES
-    write_metadata_to_database(list_for_postgres)
+    # write_metadata_to_database(list_for_postgres)
 
     # UPLOAD CALL RECORDINGS
-    upload_call_recordings()
+    # upload_call_recordings()
 
     print("what")
 
