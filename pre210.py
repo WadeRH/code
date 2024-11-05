@@ -139,20 +139,24 @@ def get_call_recordings(start, end):
     for sublist in value_list_from_call_recording_report:
 
         # SUBLIST ORDER
-        # 0 - Service Name
-        # 1 - Phone
-        # 2 - Session
-        # 3 - Start time
-        # 4 - End time
-        # 5 - Duration (sec)
-        # 6 - Call result
-        # 7 - Service Number
-        # 8 - Call Center Number
-        # 9 - Recording file ID
+        # 0 - Account
+        # 1 - Service Name
+        # 2 - Customer Name
+        # 3 - Phone Dialed
+        # 4 - Agent
+        # 5 - Session ID
+        # 6 - TransferConnect - Start time
+        # 7 - TransferEnd - End time
+        # 8 - Duration(seconds)
+        # 9 - Campaign
+        # 10 - TermCode
+        # 11 - ServiceID
+        # 12 - CallCenter ID
+        # 13 - recordingID
 
         recordingID = sublist[13]
 
-        calldate = datetime.datetime.fromtimestamp(int(sublist[3][:10]))
+        calldate = datetime.datetime.fromtimestamp(int(sublist[6][:10]) - 18000)
         calldate_str = calldate.strftime("%Y%m%d%H%M%S")
 
         recording_filename = (
@@ -177,15 +181,10 @@ def get_call_recordings(start, end):
 
         ## Write fields to new list of lists for import into Postgres
 
-        starttime = datetime.datetime.fromtimestamp(
-            int(sublist[6][:10])
-        )  #### NEED TO FIGURE OUT HOW TO GET THE TIME STAMP CORRECT FOR TIMEZONE
-        starttime_str = starttime.strftime("%Y%m%d%H%M%S")
-
         temp_list = [
             sublist[13],
             sublist[0],
-            starttime_str,
+            calldate_str,
             sublist[3],
             sublist[5].replace("@", "_"),
             "NA",
@@ -493,10 +492,10 @@ def main():
     list_for_postgres = get_call_recordings(start_date, end_date)
 
     # WRITE METADATA TO POSTGRES
-    # write_metadata_to_database(list_for_postgres)
+    write_metadata_to_database(list_for_postgres)
 
     # UPLOAD CALL RECORDINGS
-    # upload_call_recordings()
+    upload_call_recordings()
 
     print("what")
 
