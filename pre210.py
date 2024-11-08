@@ -100,8 +100,10 @@ def get_call_recordings(start, end):
     )
     call_recording_headers = {"LV-Session": session_token}
     call_recording_data = {
-        "startDate": start,  # 1712448000000
-        "endDate": end,  # 1712534400000
+        "startDate": "2023-12-23T00:00:00-05:00",
+        # "startDate": start,  # 1712448000000
+        "endDate": "2023-12-23T23:59:59-05:00",
+        # "endDate": end,  # 1712534400000
         "sortBy": "CALL_START_TIME",
         # "filter": {"callCenter": [{"id": 3063064}]},
         "filter": {
@@ -305,182 +307,188 @@ def get_call_recordings(start, end):
 
         list_for_postgres.append(temp_list)
 
-    ### Get call recording list from API
-    ### PASS #2
+    len_postgres = len(list_for_postgres)
+    logger.info(f"Length of list for postgres - {len_postgres}")
 
-    call_recording_endpoint = (
-        "https://api.na6.livevox.com/reporting/standard/callRecording"
-    )
-    call_recording_headers = {"LV-Session": session_token}
-    call_recording_data = {
-        "startDate": start,  # 1712448000000
-        "endDate": end,  # 1712534400000
-        "sortBy": "CALL_START_TIME",
-        # "filter": {"callCenter": [{"id": 3063064}]},
-        "filter": {
-            "service": [
-                {"id": "3189879"},
-                {"id": "3184367"},
-                {"id": "3184411"},
-                {"id": "3188716"},
-                {"id": "3186559"},
-                {"id": "3184412"},
-                {"id": "3185998"},
-                {"id": "3184383"},
-                {"id": "3184431"},
-                {"id": "3188729"},
-                {"id": "3189877"},
-                {"id": "3184440"},
-                {"id": "3190759"},
-                {"id": "3184425"},
-                {"id": "3184427"},
-                {"id": "3189876"},
-                {"id": "3189887"},
-                {"id": "3184434"},
-                {"id": "3184424"},
-                {"id": "3184341"},
-                {"id": "3184421"},
-                {"id": "3188730"},
-                {"id": "3184345"},
-                {"id": "3184377"},
-                {"id": "3184918"},
-                {"id": "3184386"},
-                {"id": "3190999"},
-                {"id": "3186000"},
-                {"id": "3186006"},
-                {"id": "3184413"},
-                {"id": "3186010"},
-                {"id": "3189875"},
-                {"id": "3189857"},
-                {"id": "3189859"},
-                {"id": "3189873"},
-                {"id": "3184414"},
-                {"id": "3189889"},
-                {"id": "3190993"},
-                {"id": "3191002"},
-                {"id": "3190996"},
-                {"id": "3184381"},
-                {"id": "3184913"},
-                {"id": "3184416"},
-                {"id": "3184347"},
-                {"id": "3188627"},
-                {"id": "3184360"},
-                {"id": "3184423"},
-                {"id": "3188779"},
-                {"id": "3190125"},
-                {"id": "3184400"},
-                {"id": "3184920"},
-                {"id": "3190071"},
-                {"id": "3184401"},
-                {"id": "3189872"},
-                {"id": "3184438"},
-                {"id": "3184361"},
-                {"id": "3189874"},
-                {"id": "3189884"},
-                {"id": "3184437"},
-                {"id": "3190006"},
-                {"id": "3184402"},
-                {"id": "3184403"},
-                {"id": "3184428"},
-                {"id": "3187382"},
-                {"id": "3189878"},
-                {"id": "3187885"},
-                {"id": "3190005"},
-                {"id": "3189882"},
-                {"id": "3191003"},
-                {"id": "3184922"},
-                {"id": "3184420"},
-                {"id": "3184368"},
-                {"id": "3184380"},
-                {"id": "3184370"},
-                {"id": "3184371"},
-                {"id": "3187316"},
-                {"id": "3185999"},
-                {"id": "3184363"},
-                {"id": "3184914"},
-                {"id": "3184372"},
-                {"id": "3189883"},
-            ]
-        },
-    }
+    # ### Get call recording list from API
+    # ### PASS #2
 
-    call_recording_report_response = requests.post(
-        call_recording_endpoint,
-        headers=call_recording_headers,
-        json=call_recording_data,
-    ).json()
+    # call_recording_endpoint = (
+    #     "https://api.na6.livevox.com/reporting/standard/callRecording"
+    # )
+    # call_recording_headers = {"LV-Session": session_token}
+    # call_recording_data = {
+    #     "startDate": start,  # 1712448000000
+    #     "endDate": end,  # 1712534400000
+    #     "sortBy": "CALL_START_TIME",
+    #     # "filter": {"callCenter": [{"id": 3063064}]},
+    #     "filter": {
+    #         "service": [
+    #             {"id": "3189879"},
+    #             {"id": "3184367"},
+    #             {"id": "3184411"},
+    #             {"id": "3188716"},
+    #             {"id": "3186559"},
+    #             {"id": "3184412"},
+    #             {"id": "3185998"},
+    #             {"id": "3184383"},
+    #             {"id": "3184431"},
+    #             {"id": "3188729"},
+    #             {"id": "3189877"},
+    #             {"id": "3184440"},
+    #             {"id": "3190759"},
+    #             {"id": "3184425"},
+    #             {"id": "3184427"},
+    #             {"id": "3189876"},
+    #             {"id": "3189887"},
+    #             {"id": "3184434"},
+    #             {"id": "3184424"},
+    #             {"id": "3184341"},
+    #             {"id": "3184421"},
+    #             {"id": "3188730"},
+    #             {"id": "3184345"},
+    #             {"id": "3184377"},
+    #             {"id": "3184918"},
+    #             {"id": "3184386"},
+    #             {"id": "3190999"},
+    #             {"id": "3186000"},
+    #             {"id": "3186006"},
+    #             {"id": "3184413"},
+    #             {"id": "3186010"},
+    #             {"id": "3189875"},
+    #             {"id": "3189857"},
+    #             {"id": "3189859"},
+    #             {"id": "3189873"},
+    #             {"id": "3184414"},
+    #             {"id": "3189889"},
+    #             {"id": "3190993"},
+    #             {"id": "3191002"},
+    #             {"id": "3190996"},
+    #             {"id": "3184381"},
+    #             {"id": "3184913"},
+    #             {"id": "3184416"},
+    #             {"id": "3184347"},
+    #             {"id": "3188627"},
+    #             {"id": "3184360"},
+    #             {"id": "3184423"},
+    #             {"id": "3188779"},
+    #             {"id": "3190125"},
+    #             {"id": "3184400"},
+    #             {"id": "3184920"},
+    #             {"id": "3190071"},
+    #             {"id": "3184401"},
+    #             {"id": "3189872"},
+    #             {"id": "3184438"},
+    #             {"id": "3184361"},
+    #             {"id": "3189874"},
+    #             {"id": "3189884"},
+    #             {"id": "3184437"},
+    #             {"id": "3190006"},
+    #             {"id": "3184402"},
+    #             {"id": "3184403"},
+    #             {"id": "3184428"},
+    #             {"id": "3187382"},
+    #             {"id": "3189878"},
+    #             {"id": "3187885"},
+    #             {"id": "3190005"},
+    #             {"id": "3189882"},
+    #             {"id": "3191003"},
+    #             {"id": "3184922"},
+    #             {"id": "3184420"},
+    #             {"id": "3184368"},
+    #             {"id": "3184380"},
+    #             {"id": "3184370"},
+    #             {"id": "3184371"},
+    #             {"id": "3187316"},
+    #             {"id": "3185999"},
+    #             {"id": "3184363"},
+    #             {"id": "3184914"},
+    #             {"id": "3184372"},
+    #             {"id": "3189883"},
+    #         ]
+    #     },
+    # }
 
-    call_recording_report = call_recording_report_response.get("callRecording")
+    # call_recording_report_response = requests.post(
+    #     call_recording_endpoint,
+    #     headers=call_recording_headers,
+    #     json=call_recording_data,
+    # ).json()
 
-    # fieldnames = ['account', 'transferConnect', 'phone', 'session', call_result, 'termCode', 'campaign', 'serviceId', 'agent', 'transferDuration']
+    # call_recording_report = call_recording_report_response.get("callRecording")
 
-    # NOTE: Postgres columns = recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs
-    # Mapping to sublist             13                  00              06          03          05             NULL       10                09              11        04          08
+    # # fieldnames = ['account', 'transferConnect', 'phone', 'session', call_result, 'termCode', 'campaign', 'serviceId', 'agent', 'transferDuration']
 
-    value_list_from_call_recording_report = []
+    # # NOTE: Postgres columns = recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs
+    # # Mapping to sublist             13                  00              06          03          05             NULL       10                09              11        04          08
 
-    for dictionary in call_recording_report:
-        values = list(dictionary.values())
-        value_list_from_call_recording_report.append(values)
+    # value_list_from_call_recording_report = []
 
-    for sublist in value_list_from_call_recording_report:
+    # for dictionary in call_recording_report:
+    #     values = list(dictionary.values())
+    #     value_list_from_call_recording_report.append(values)
 
-        # SUBLIST ORDER
-        # 0 - Account
-        # 1 - Service Name
-        # 2 - Customer Name
-        # 3 - Phone Dialed
-        # 4 - Agent
-        # 5 - Session ID
-        # 6 - TransferConnect - Start time
-        # 7 - TransferEnd - End time
-        # 8 - Duration(seconds)
-        # 9 - Campaign
-        # 10 - TermCode
-        # 11 - ServiceID
-        # 12 - CallCenter ID
-        # 13 - recordingID
+    # for sublist in value_list_from_call_recording_report:
 
-        recordingID = sublist[13]
+    #     # SUBLIST ORDER
+    #     # 0 - Account
+    #     # 1 - Service Name
+    #     # 2 - Customer Name
+    #     # 3 - Phone Dialed
+    #     # 4 - Agent
+    #     # 5 - Session ID
+    #     # 6 - TransferConnect - Start time
+    #     # 7 - TransferEnd - End time
+    #     # 8 - Duration(seconds)
+    #     # 9 - Campaign
+    #     # 10 - TermCode
+    #     # 11 - ServiceID
+    #     # 12 - CallCenter ID
+    #     # 13 - recordingID
 
-        calldate = datetime.datetime.fromtimestamp(int(sublist[6][:10]) - 18000)
-        calldate_str = calldate.strftime("%Y%m%d%H%M%S")
+    #     recordingID = sublist[13]
 
-        recording_filename = calldate_str + "_" + sublist[0] + "_" + sublist[3] + ".mp3"
+    #     calldate = datetime.datetime.fromtimestamp(int(sublist[6][:10]) - 18000)
+    #     calldate_str = calldate.strftime("%Y%m%d%H%M%S")
 
-        call_recording_dl_endpoint = (
-            "https://api.na6.livevox.com/compliance/recording/" + recordingID + "?="
-        )
+    #     recording_filename = calldate_str + "_" + sublist[0] + "_" + sublist[3] + ".mp3"
 
-        call_recording_binary = requests.get(
-            call_recording_dl_endpoint, headers=call_recording_headers
-        )
+    #     call_recording_dl_endpoint = (
+    #         "https://api.na6.livevox.com/compliance/recording/" + recordingID + "?="
+    #     )
 
-        call_recording_filename = Path(
-            "/home/callproc/pre210_callrecs/" + recording_filename
-        )
+    #     call_recording_binary = requests.get(
+    #         call_recording_dl_endpoint, headers=call_recording_headers
+    #     )
 
-        call_recording_filename.write_bytes(call_recording_binary.content)
+    #     call_recording_filename = Path(
+    #         "/home/callproc/pre210_callrecs/" + recording_filename
+    #     )
 
-        sublist[13] = recording_filename
+    #     call_recording_filename.write_bytes(call_recording_binary.content)
 
-        ## Write fields to new list of lists for import into Postgres
+    #     sublist[13] = recording_filename
 
-        temp_list = [
-            sublist[13],
-            sublist[0],
-            calldate_str,
-            sublist[3],
-            sublist[5].replace("@", "_"),
-            "NA",
-            sublist[10],
-            sublist[9],
-            sublist[11],
-            sublist[4],
-            sublist[8],
-        ]
+    #     ## Write fields to new list of lists for import into Postgres
 
-        list_for_postgres.append(temp_list)
+    #     temp_list = [
+    #         sublist[13],
+    #         sublist[0],
+    #         calldate_str,
+    #         sublist[3],
+    #         sublist[5].replace("@", "_"),
+    #         "NA",
+    #         sublist[10],
+    #         sublist[9],
+    #         sublist[11],
+    #         sublist[4],
+    #         sublist[8],
+    #     ]
+
+    #     list_for_postgres.append(temp_list)
+
+    # len_postgres = len(list_for_postgres)
+    # logger.info(f"Length of list for postgres - {len_postgres}")
 
     return list_for_postgres
 
