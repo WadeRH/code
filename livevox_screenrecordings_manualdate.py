@@ -32,7 +32,7 @@ with open(json_file_path, "r") as f:
 
 aws_access_key_id = aws_creds["aws_access_key_id"]
 aws_secret_access_key = aws_creds["aws_secret_access_key"]
-aws_region = 'us-west-2'
+aws_region = "us-west-2"
 
 filepath = "/home/callproc/LVScreenRecordings/"
 tmpdir_path = "/home/callproc/LVScreenRecordings/tmp"
@@ -40,20 +40,26 @@ log_filepath = "/home/callproc/logs/"
 bucket = "livevoxscreenrecordings"
 
 entered_filename = input("Please enter the zip file name to process: ")
-error_topic_arn = 'arn:aws:sns:us-west-2:416360478487:Recording_Import_Notifications'
+error_topic_arn = "arn:aws:sns:us-west-2:416360478487:Recording_Import_Notifications"
 
 # PostgreSQL database connection details
-db_host = 'callrecordinginfo.cx8wkeu24exk.us-west-2.rds.amazonaws.com'
-db_port = '5432'
-db_name = 'callrecordinginfo'
-db_user = 'call_recordings_user'
-db_password = 'ycx$qWs@nVP4T$f4'
+db_host = "callrecordinginfo.cx8wkeu24exk.us-west-2.rds.amazonaws.com"
+db_port = "5432"
+db_name = "callrecordinginfo"
+db_user = "call_recordings_user"
+db_password = "ycx$qWs@nVP4T$f4"
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
 fh = logging.FileHandler(
-    "/home/callproc/logs/" + "LV_ScreenRec.log." + entered_filename[0:4] + '-' + entered_filename[4:6] + '-' + entered_filename[6:8]
+    "/home/callproc/logs/"
+    + "LV_ScreenRec.log."
+    + entered_filename[0:4]
+    + "-"
+    + entered_filename[4:6]
+    + "-"
+    + entered_filename[6:8]
 )
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
@@ -267,7 +273,7 @@ def download_file(
     Helper function to download remote file via sftp.
     It contains a fix for a bug that prevents a large file downloading with :meth:`paramiko.SFTPClient.get`
     Note: this function relies on some private paramiko API and has been tested with paramiko 2.7.1.
-          So it may not work with other paramiko versions.
+    So it may not work with other paramiko versions.
     :param sftp_client: paramiko sftp client
     :param remote_path: remote file path
     :param local_path: local file path
@@ -333,9 +339,13 @@ def upload_call_recordings():
     day = tmp_files[0][6:8]
     search_limit = tmp_files[0][0:8]
     s3path = year + "/" + month + "/" + day + "/"
-    global csv_key 
-    csv_key = s3path + year + month + day + ".csv"
-    
+    global csv_key
+    if entered_filename[9:11] == "15":
+        csv_key = s3path + year + month + day + "_15.csv"
+    elif entered_filename[9:11] == "23":
+        csv_key = s3path + year + month + day + "_23.csv"
+    else:
+        csv_key = s3path + year + month + day + ".csv"
 
     # Check if files exist in tempdir
     is_empty = not any(Path(tmpdir_path).iterdir())
@@ -351,10 +361,7 @@ def upload_call_recordings():
         logger.info("Files found to process")
 
     # Connect to AWS and create an S3 resource
-    s3 = boto3.resource(
-        service_name="s3",
-        region_name="us-west-2"
-    )
+    s3 = boto3.resource(service_name="s3", region_name="us-west-2")
 
     if folder_exists(bucket, s3path):
         print("Folder exists")
@@ -393,11 +400,15 @@ def upload_call_recordings():
     differences_in_s3, differences_in_local = find_differences(s3_files, local_files)
 
     print("Differences in s3 files compared to local: ")
-    logger.info("Differences in s3 files compared to local:" + str(len(differences_in_s3)))
+    logger.info(
+        "Differences in s3 files compared to local:" + str(len(differences_in_s3))
+    )
     print(len(differences_in_s3))
     logger.info(len(differences_in_s3))
 
-    print("Differences in local files compared to s3: " + str(len(differences_in_local)))
+    print(
+        "Differences in local files compared to s3: " + str(len(differences_in_local))
+    )
     print(len(differences_in_local))
     logger.info("Differences in local files compared to s3: ")
     logger.info(len(differences_in_local))
@@ -434,26 +445,27 @@ def upload_call_recordings():
             logger.exception(f"An error occurred: {e}", exc_info=True)
     else:
         # Build functions to identify missing files in S3 and reupload
-        send_sns_notification(error_topic_arn, "ERROR: Mismatch between files uploaded to S3 and in local drive!")
-        
+        send_sns_notification(
+            error_topic_arn,
+            "ERROR: Mismatch between files uploaded to S3 and in local drive!",
+        )
+
         logger.info("Differences in S3 compared to local: ")
         for item in differences_in_s3:
             logger.info(item)
-            
+
         logger.info("Differences in local compared to S3 : ")
         for item in differences_in_local:
             logger.info(item)
+
 
 def folder_exists(bucket: str, path: str) -> bool:
     """
     Check to see if YYYY/MM/DD diretory exists within S3 bucket
     based on first 6 characters of filename
     """
-    s3 = boto3.resource(
-        service_name="s3",
-        region_name="us-west-2"
-    )
-    
+    s3 = boto3.resource(service_name="s3", region_name="us-west-2")
+
     s3 = boto3.client("s3")
     path = path.rstrip("/")
     resp = s3.list_objects(Bucket=bucket, Prefix=path, Delimiter="/", MaxKeys=1)
@@ -573,16 +585,13 @@ def cleanup(directory, tmpdirectory):
         print(f"An error occurred: {e}")
         logger.exception(f"An error occurred: {e}", exc_info=True)
 
+
 def csv_to_postgres():
     s3_client = boto3.client("s3")
-    
+
     # Initialize PostgreSQL connection
     conn = psycopg2.connect(
-        host=db_host,
-        port=db_port,
-        database=db_name,
-        user=db_user,
-        password=db_password
+        host=db_host, port=db_port, database=db_name, user=db_user, password=db_password
     )
     cursor = conn.cursor()
 
@@ -590,7 +599,7 @@ def csv_to_postgres():
         # Download CSV file from S3
         logger.info("Getting CSV file from S3 bucket")
         s3_object = s3_client.get_object(Bucket=bucket, Key=csv_key)
-        csv_data = s3_object['Body'].read().decode('utf-8').splitlines()
+        csv_data = s3_object["Body"].read().decode("utf-8").splitlines()
 
         # Parse CSV data and insert into PostgreSQL table
         logger.info("Reading CSV file")
@@ -599,8 +608,23 @@ def csv_to_postgres():
         logger.info("Starting data insertion to database")
         for row in csv_reader:
             # Assuming your table schema matches the CSV file columns
-            cursor.execute("INSERT INTO livevox_screen_metadata (recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10]))
-        
+            cursor.execute(
+                "INSERT INTO livevox_screen_metadata (recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    row[0],
+                    row[1],
+                    row[2],
+                    row[3],
+                    row[4],
+                    row[5],
+                    row[6],
+                    row[7],
+                    row[8],
+                    row[9],
+                    row[10],
+                ),
+            )
+
         # Commit the transaction
         logger.info("Commiting data to database")
         conn.commit()
@@ -608,13 +632,16 @@ def csv_to_postgres():
 
     except Exception as e:
         print(f"Error: {e}")
-        send_sns_notification(error_topic_arn, "ERROR: LiveVox screen recording metadata import failed!")
+        send_sns_notification(
+            error_topic_arn, "ERROR: LiveVox screen recording metadata import failed!"
+        )
         conn.rollback()
 
     finally:
         # Close PostgreSQL connection
         cursor.close()
         conn.close()
+
 
 def send_sns_notification(topic_arn, message):
     json_file_path = r".secrets/amazon.json"
@@ -624,30 +651,46 @@ def send_sns_notification(topic_arn, message):
 
     aws_access_key_id = aws_creds["aws_access_key_id"]
     aws_secret_access_key = aws_creds["aws_secret_access_key"]
-    aws_region = 'us-west-2'
-    
-    sns_client = boto3.client('sns', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=aws_region)
-    response = sns_client.publish(
-        TopicArn=topic_arn,
-        Message=message
+    aws_region = "us-west-2"
+
+    sns_client = boto3.client(
+        "sns",
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        region_name=aws_region,
     )
-    
-    print("MessageId of the published message:", response['MessageId'])
-    logger.info("MessageId of the published message:", response['MessageId'])
+    response = sns_client.publish(TopicArn=topic_arn, Message=message)
+
+    print("MessageId of the published message:", response["MessageId"])
+    logger.info("MessageId of the published message:", response["MessageId"])
+
 
 def yesterdays_log_to_S3():
     yesterday = datetime.now() - timedelta(1)
     filedate = datetime.strftime(yesterday, "%Y%m%d")
-    log_filename = "LV_ScreenRec.log." + entered_filename[0:4] + '-' + entered_filename[4:6] + '-' + entered_filename[6:8]
-    
-    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=aws_region)
+    log_filename = (
+        "LV_ScreenRec.log."
+        + entered_filename[0:4]
+        + "-"
+        + entered_filename[4:6]
+        + "-"
+        + entered_filename[6:8]
+    )
+
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+        region_name=aws_region,
+    )
 
     try:
         s3_filename = "logs/" + log_filename
-        s3.upload_file('/home/callproc/logs/' + log_filename, bucket, s3_filename)
+        s3.upload_file("/home/callproc/logs/" + log_filename, bucket, s3_filename)
         logger.info(f"{log_filename} log file uploaded successfully.")
     except Exception as e:
         logger.exception(f"Error uploading {log_filename}: {e}", exc_info=True)
+
 
 def main():
 
@@ -661,7 +704,7 @@ def main():
 
     # UPLOAD CALL RECORDINGS
     upload_call_recordings()
-    
+
     # IMPORT CSV TO POSTGRES
     csv_to_postgres()
 
