@@ -663,7 +663,12 @@ def yesterdays_log_to_S3():
     yesterday = datetime.now() - timedelta(1)
     filedate = datetime.strftime(yesterday, "%Y%m%d")
     log_filename = (
-        "LV_ScreenRec.log." + filedate[0:4] + "-" + filedate[4:6] + "-" + filedate[6:8]
+        "LV_ScreenRec_15.log."
+        + filedate[0:4]
+        + "-"
+        + filedate[4:6]
+        + "-"
+        + filedate[6:8]
     )
 
     s3 = boto3.client(
