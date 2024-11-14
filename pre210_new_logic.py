@@ -74,6 +74,13 @@ def setup_logging(
 def get_call_recordings(start, end):
     ### Get session token for future API calls
 
+    input_date = input(
+        "Please enter the date to pull call recordings for in the YYYY-MM-DD format: "
+    )
+
+    start_date = input_date + "T00:00:00-05:00"
+    end_date = input_date + "T23:59:59-05:00"
+
     session_token_endpoint = "https://api.na6.livevox.com/session/login"
     session_token_headers = {
         "LV-Access": "eefe858c-430c-4788-b5a2-7d33bb0ec611",
@@ -100,10 +107,10 @@ def get_call_recordings(start, end):
     )
     call_recording_headers = {"LV-Session": session_token}
     call_recording_data = {
-        "startDate": "2023-12-23T00:00:00-05:00",
-        # "startDate": start,  # 1712448000000
-        "endDate": "2023-12-23T23:59:59-05:00",
-        # "endDate": end,  # 1712534400000
+        # "startDate": "2024-01-17T00:00:00-05:00",
+        "startDate": start_date,
+        # "endDate": "2024-01-17T23:59:59-05:00",
+        "endDate": end_date,
         "sortBy": "CALL_START_TIME",
         # "filter": {"callCenter": [{"id": 3063064}]},
         "filter": {
@@ -339,8 +346,10 @@ def get_call_recordings(start, end):
     )
     call_recording_headers = {"LV-Session": session_token}
     call_recording_data = {
-        "startDate": start,  # 1712448000000
-        "endDate": end,  # 1712534400000
+        # "startDate": "2024-01-17T00:00:00-05:00",
+        "startDate": start_date,
+        # "endDate": "2024-01-17T23:59:59-05:00",
+        "endDate": end_date,
         "sortBy": "CALL_START_TIME",
         # "filter": {"callCenter": [{"id": 3063064}]},
         "filter": {
@@ -447,28 +456,33 @@ def get_call_recordings(start, end):
 
     holding_list = []
 
-    for dictionary in call_recording_report:
-        # values = list(dictionary.values())
-        # value_list_from_call_recording_report =
+    try:
+        for dictionary in call_recording_report:
+            # values = list(dictionary.values())
+            # value_list_from_call_recording_report =
 
-        holding_list = [
-            dictionary.get("account", "0"),
-            dictionary.get("service", "N/A"),
-            dictionary.get("name", "N/A"),
-            dictionary.get("phone", "00000000000"),
-            dictionary.get("agent", "N/A"),
-            dictionary.get("session", "N/A"),
-            dictionary.get("transferConnect", "00000000"),
-            dictionary.get("transferEnd", "00000000"),
-            dictionary.get("transferDuration", 000),
-            dictionary.get("campaign", "N/A"),
-            dictionary.get("termCode", "N/A"),
-            dictionary.get("serviceId", "000000"),
-            dictionary.get("callCenterId", "000000"),
-            dictionary.get("recordingId", "N/A"),
-        ]
+            holding_list = [
+                dictionary.get("account", "0"),
+                dictionary.get("service", "N/A"),
+                dictionary.get("name", "N/A"),
+                dictionary.get("phone", "00000000000"),
+                dictionary.get("agent", "N/A"),
+                dictionary.get("session", "N/A"),
+                dictionary.get("transferConnect", "00000000"),
+                dictionary.get("transferEnd", "00000000"),
+                dictionary.get("transferDuration", 000),
+                dictionary.get("campaign", "N/A"),
+                dictionary.get("termCode", "N/A"),
+                dictionary.get("serviceId", "000000"),
+                dictionary.get("callCenterId", "000000"),
+                dictionary.get("recordingId", "N/A"),
+            ]
 
-        value_list_from_call_recording_report.append(holding_list)
+            value_list_from_call_recording_report.append(holding_list)
+    except:
+        logger.info("Failure to pull second set of services.  Likely no data.")
+        logger.info("Call recording report data is: " + str(call_recording_report))
+        return list_for_postgres
 
     for sublist in value_list_from_call_recording_report:
 
@@ -545,7 +559,7 @@ def write_metadata_to_database(list_for_postgres):
     )
     cur = conn.cursor()
 
-    sql = "INSERT INTO livevox_test (recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    sql = "INSERT INTO livevox_metadata (recording_filename, account_number, start_time, phone_dialed, session_id, call_result, agent_result, campaign_filename, client_id, agent_name, duration_secs) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
     written_records = 0
 
@@ -603,7 +617,7 @@ def upload_call_recordings():
         region_name=region_name,
     )
 
-    bucket = "livevoxpre210test"
+    bucket = "livevoxcallrecordings"
 
     s3 = boto3.resource(service_name="s3", region_name="us-west-2")
 
